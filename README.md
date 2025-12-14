@@ -53,6 +53,3 @@ MascotasDB-SQL/
 ```sql
 SET SERVEROUTPUT ON;
 @logica_refugio_plsql.sql
-```
-
-<p align="center"> <em>Proyecto académico para la práctica de SQL y PL/SQL en Oracle.</em> </p>
