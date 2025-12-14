@@ -46,13 +46,15 @@ MascotasDB-SQL/
 │
 ├── insercion_datos.sql
 ├── logica_refugio_plsql.sql
-├── README.md
-└── .git/
+└── README.md
 ```
 <h2 align="center" style="color:#3F51B5;">🚀 Ejecución</h2>
 ```
 
+
+```sql
 SET SERVEROUTPUT ON;
 @logica_refugio_plsql.sql
+```
 
 <p align="center"> <em>Proyecto académico para la práctica de SQL y PL/SQL en Oracle.</em> </p> ```
