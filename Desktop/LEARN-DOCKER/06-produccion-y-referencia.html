@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Producción y referencia — Docker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+    <main class="page-content">
+      <span class="eyebrow">Módulo 06 · Último tramo</span>
+      <h1 class="page-title">Producción y referencia rápida</h1>
+      <p class="page-lede">
+        La diferencia entre "sé usar Docker" y "puedo llevar esto a producción" está en un
+        puñado de hábitos. Cierra con el cheat sheet completo para tenerlo siempre a mano.
+      </p>
+
+      <h2><span class="num">06.1</span> Imágenes pequeñas, deliberadamente</h2>
+      <p>
+        Cada MB extra en tu imagen es más superficie de ataque, más tiempo de descarga y más
+        tiempo de despliegue.
+      </p>
+      <ul>
+        <li>Prefiere bases <strong>alpine</strong> o <strong>distroless</strong> en vez de imágenes completas de Ubuntu/Debian cuando sea posible.</li>
+        <li>Usa <strong>multi-stage builds</strong> (visto en el módulo 03) para no cargar herramientas de compilación en producción.</li>
+        <li>Combina instrucciones <code>RUN</code> relacionadas en una sola línea para reducir capas innecesarias.</li>
+      </ul>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">Dockerfile</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># En vez de tres RUN separados, uno solo encadenado:</span>
+<span class="c-flag">RUN</span> apt-get update <span class="c-flag">&&</span> \
+    apt-get install -y curl <span class="c-flag">&&</span> \
+    rm -rf /var/lib/apt/lists/*</code></pre>
+      </div>
+
+      <h2><span class="num">06.2</span> Nunca corras como root dentro del contenedor</h2>
+      <p>
+        Por defecto, los procesos dentro de un contenedor corren como <code>root</code>. Si un
+        atacante logra escapar del aislamiento del contenedor, hereda esos privilegios en el
+        host.
+      </p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">Dockerfile</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-flag">RUN</span> addgroup -S appgroup <span class="c-flag">&&</span> adduser -S appuser -G appgroup
+<span class="c-flag">USER</span> appuser</code></pre>
+      </div>
+
+      <h2><span class="num">06.3</span> Nunca uses el tag :latest en producción</h2>
+      <div class="warn">
+        <span class="tag">El problema</span>
+        <p><code>:latest</code> es una etiqueta móvil — apunta a lo que sea que se publicó más recientemente, sin garantía de qué versión es. Un <code>docker pull</code> en un servidor puede traer código distinto al que probaste ayer, sin que nadie lo haya pedido explícitamente.</p>
+      </div>
+      <p>Usa versiones explícitas y, para trazabilidad total, el hash del commit o el digest de la imagen:</p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-cmd">docker</span> run mi-app:2.4.1
+<span class="c-comment"># o, para inmutabilidad total, por digest de contenido:</span>
+<span class="c-cmd">docker</span> run mi-app@sha256:a1b2c3...</code></pre>
+      </div>
+
+      <h2><span class="num">06.4</span> Healthchecks</h2>
+      <p>
+        Le dicen a Docker (y a quien orqueste tus contenedores) si tu app está realmente
+        respondiendo, no solo si el proceso sigue vivo.
+      </p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">Dockerfile</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-flag">HEALTHCHECK</span> --interval=30s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost:3000/health <span class="c-flag">||</span> exit 1</code></pre>
+      </div>
+
+      <h2><span class="num">06.5</span> Límites de recursos</h2>
+      <p>Sin límites, un contenedor con una fuga de memoria puede consumir todo el host.</p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-cmd">docker</span> run <span class="c-flag">--memory=512m</span> <span class="c-flag">--cpus=1.5</span> mi-app</code></pre>
+      </div>
+
+      <h2><span class="num">06.6</span> Secretos: nunca en el Dockerfile ni en ENV en texto plano</h2>
+      <div class="warn">
+        <span class="tag">Error común</span>
+        <p>Un <code>ENV DB_PASSWORD=secreto</code> en el Dockerfile queda grabado permanentemente en la imagen y visible con <code>docker history</code>, aunque borres esa línea después. Usa inyección en runtime (variables de entorno pasadas al <code>run</code>/Compose, o un gestor de secretos) — nunca lo escribas dentro de la imagen.</p>
+      </div>
+
+      <h2><span class="num">06.7</span> Escaneo de vulnerabilidades</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Docker Scout, integrado en el CLI moderno</span>
+<span class="c-cmd">docker</span> scout cves mi-app:2.4.1
+
+<span class="c-comment"># Alternativa muy usada: Trivy</span>
+<span class="c-cmd">trivy</span> image mi-app:2.4.1</code></pre>
+      </div>
+
+      <h2><span class="num">06.8</span> Checklist antes de desplegar</h2>
+      <ul>
+        <li><strong>Imagen base mínima</strong> (alpine/distroless) y multi-stage build aplicado.</li>
+        <li><strong>Usuario no-root</strong> definido con <code>USER</code>.</li>
+        <li><strong>Tag explícito</strong>, nunca <code>:latest</code>.</li>
+        <li><strong>Healthcheck</strong> configurado.</li>
+        <li><strong>Límites de CPU/memoria</strong> definidos.</li>
+        <li><strong>Secretos</strong> inyectados en runtime, jamás horneados en la imagen.</li>
+        <li><strong>.dockerignore</strong> excluyendo <code>.git</code>, <code>.env</code> y artefactos innecesarios.</li>
+        <li><strong>Escaneo de vulnerabilidades</strong> corrido sobre la imagen final.</li>
+      </ul>
+
+      <h2><span class="num">06.9</span> Cheat sheet completo</h2>
+      <p>Referencia rápida de todo lo visto en la guía, agrupado por categoría.</p>
+
+      <h3>Ciclo de vida</h3>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>docker run [flags] imagen</td><td>Crea y arranca un contenedor nuevo</td></tr>
+          <tr><td>docker start &lt;id&gt;</td><td>Reinicia un contenedor detenido existente</td></tr>
+          <tr><td>docker stop &lt;id&gt;</td><td>Detiene de forma ordenada</td></tr>
+          <tr><td>docker restart &lt;id&gt;</td><td>Detiene e inicia de nuevo</td></tr>
+          <tr><td>docker kill &lt;id&gt;</td><td>Detiene de inmediato, sin gracia</td></tr>
+          <tr><td>docker rm &lt;id&gt;</td><td>Elimina un contenedor detenido</td></tr>
+          <tr><td>docker rm -f &lt;id&gt;</td><td>Fuerza la eliminación aunque esté corriendo</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Inspección</h3>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>docker ps / ps -a</td><td>Contenedores corriendo / todos</td></tr>
+          <tr><td>docker logs -f &lt;id&gt;</td><td>Logs en vivo</td></tr>
+          <tr><td>docker inspect &lt;id&gt;</td><td>Metadata completa en JSON</td></tr>
+          <tr><td>docker stats</td><td>Uso de CPU/memoria en tiempo real</td></tr>
+          <tr><td>docker top &lt;id&gt;</td><td>Procesos corriendo dentro del contenedor</td></tr>
+          <tr><td>docker exec -it &lt;id&gt; bash</td><td>Terminal dentro de un contenedor activo</td></tr>
+          <tr><td>docker cp origen destino</td><td>Copia archivos host ↔ contenedor</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Imágenes</h3>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>docker images</td><td>Lista imágenes locales</td></tr>
+          <tr><td>docker pull imagen</td><td>Descarga sin ejecutar</td></tr>
+          <tr><td>docker build -t nombre .</td><td>Construye desde un Dockerfile</td></tr>
+          <tr><td>docker tag origen destino</td><td>Renombra/etiqueta</td></tr>
+          <tr><td>docker push imagen</td><td>Sube a un registro</td></tr>
+          <tr><td>docker rmi imagen</td><td>Elimina una imagen local</td></tr>
+          <tr><td>docker history imagen</td><td>Muestra las capas y su tamaño</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Volúmenes y redes</h3>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>docker volume create/ls/rm</td><td>Gestión de volúmenes</td></tr>
+          <tr><td>docker network create/ls/inspect</td><td>Gestión de redes</td></tr>
+          <tr><td>-v origen:destino</td><td>Monta un volumen o bind mount</td></tr>
+          <tr><td>--network nombre</td><td>Conecta el contenedor a una red</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Compose</h3>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>docker compose up -d</td><td>Levanta todos los servicios en segundo plano</td></tr>
+          <tr><td>docker compose down [-v]</td><td>Detiene y elimina (con -v, borra volúmenes también)</td></tr>
+          <tr><td>docker compose logs -f</td><td>Logs combinados de todos los servicios</td></tr>
+          <tr><td>docker compose exec servicio bash</td><td>Terminal dentro de un servicio</td></tr>
+          <tr><td>docker compose build</td><td>Reconstruye imágenes definidas con "build:"</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Limpieza y sistema</h3>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>docker system prune [-a]</td><td>Limpia recursos sin usar</td></tr>
+          <tr><td>docker system df</td><td>Espacio en disco usado por Docker</td></tr>
+        </tbody>
+      </table>
+
+      <h2><span class="num">06.10</span> Glosario</h2>
+      <table class="ref-table">
+        <tbody>
+          <tr><td>Imagen</td><td>Plantilla de solo lectura de la que se crean contenedores</td></tr>
+          <tr><td>Contenedor</td><td>Instancia en ejecución de una imagen</td></tr>
+          <tr><td>Registro (registry)</td><td>Almacén de imágenes; Docker Hub es el más común</td></tr>
+          <tr><td>Daemon (dockerd)</td><td>Proceso en segundo plano que gestiona todo el motor Docker</td></tr>
+          <tr><td>Capa (layer)</td><td>Cada instrucción del Dockerfile genera una capa cacheable</td></tr>
+          <tr><td>Volumen</td><td>Mecanismo de persistencia de datos independiente del ciclo de vida del contenedor</td></tr>
+          <tr><td>Orquestación</td><td>Coordinación de múltiples contenedores/hosts (Compose para un host, Kubernetes/Swarm para varios)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <span class="tag">Siguiente paso natural</span>
+        <p>Cuando necesites correr contenedores en varios servidores a la vez, con autoescalado y recuperación automática ante fallos, el siguiente escalón es <strong>Kubernetes</strong> — pero todo lo que aprendiste aquí (imágenes, capas, redes, volúmenes) sigue siendo la base sobre la que se construye.</p>
+      </div>
+
+      <div class="page-nav">
+        <a href="05-docker-compose.html"><span class="dir">← Anterior</span><span class="lbl">Docker Compose</span></a>
+        <a class="next" href="index.html"><span class="dir">Volver al inicio →</span><span class="lbl">Punto de partida</span></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script>renderChrome('produccion');</script>
+</body>
+</html>

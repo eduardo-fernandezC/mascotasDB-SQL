@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volúmenes y redes — Docker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+    <main class="page-content">
+      <span class="eyebrow">Módulo 04</span>
+      <h1 class="page-title">Volúmenes y redes</h1>
+      <p class="page-lede">
+        Dos preguntas que todo proyecto real termina haciéndose: ¿dónde viven mis datos
+        cuando el contenedor muere? Y, ¿cómo hago que dos contenedores se hablen entre sí?
+      </p>
+
+      <h2><span class="num">04.1</span> El problema: los contenedores son efímeros</h2>
+      <div class="analogy">
+        <span class="tag">Analogía de la pizarra</span>
+        <p>
+          El sistema de archivos de un contenedor es como una pizarra blanca: puedes escribir
+          en ella todo lo que quieras mientras está encendido, pero en el momento en que lo
+          eliminas (<code>docker rm</code>), se borra todo. Si tu base de datos guarda sus
+          archivos ahí dentro sin más, cada vez que reconstruyas el contenedor pierdes toda la
+          información. Los <strong>volúmenes</strong> son la forma de decir "esta parte no se
+          borra con la pizarra".
+        </p>
+      </div>
+
+      <h2><span class="num">04.2</span> Volumes vs. Bind mounts vs. tmpfs</h2>
+      <table class="ref-table">
+        <thead><tr><th>Tipo</th><th>Dónde vive</th><th>Cuándo usarlo</th></tr></thead>
+        <tbody>
+          <tr><td>Volume</td><td>Gestionado por Docker, en su propio espacio en disco</td><td>Datos persistentes de producción (bases de datos, uploads). La opción recomendada por defecto.</td></tr>
+          <tr><td>Bind mount</td><td>Una ruta específica de TU máquina</td><td>Desarrollo local: montar tu código fuente para ver cambios en vivo sin reconstruir la imagen.</td></tr>
+          <tr><td>tmpfs</td><td>Solo en memoria RAM, nunca toca disco</td><td>Datos temporales sensibles que no deben persistir ni escribirse a disco.</td></tr>
+        </tbody>
+      </table>
+
+      <h2><span class="num">04.3</span> Comandos de volúmenes</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Crear un volumen gestionado por Docker</span>
+<span class="c-cmd">docker</span> volume create datos-db
+
+<span class="c-comment"># Listar volúmenes existentes</span>
+<span class="c-cmd">docker</span> volume ls
+
+<span class="c-comment"># Ver detalles (incluye la ruta real en el host)</span>
+<span class="c-cmd">docker</span> volume inspect datos-db
+
+<span class="c-comment"># Eliminar un volumen (falla si algún contenedor lo está usando)</span>
+<span class="c-cmd">docker</span> volume rm datos-db</code></pre>
+      </div>
+
+      <h2><span class="num">04.4</span> Usar volúmenes y bind mounts con -v</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Volume gestionado: Docker decide dónde vive físicamente</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-d</span> <span class="c-flag">-v</span> datos-db:/var/lib/mysql <span class="c-flag">--name</span> mi-db mysql
+
+<span class="c-comment"># Bind mount: montas TU carpeta local dentro del contenedor</span>
+<span class="c-comment"># útil para desarrollo — editas en tu editor, el contenedor ve el cambio al instante</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-d</span> <span class="c-flag">-v</span> <span class="c-flag">$(pwd)</span>:/app <span class="c-flag">-p</span> 3000:3000 mi-app-dev
+
+<span class="c-comment"># Sintaxis más explícita y recomendada (--mount)</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-d</span> <span class="c-flag">--mount</span> source=datos-db,target=/var/lib/mysql mysql</code></pre>
+      </div>
+      <div class="note">
+        <span class="tag">-v vs. --mount</span>
+        <p><code>-v</code> es más corto y compacto; <code>--mount</code> es más explícito y detecta errores de sintaxis antes (por ejemplo, no crea silenciosamente una carpeta si te equivocaste de ruta). Para producción, se recomienda <code>--mount</code>.</p>
+      </div>
+
+      <h2><span class="num">04.5</span> Redes: cómo se hablan los contenedores</h2>
+      <p>
+        Por defecto, cada contenedor está aislado en su propia burbuja de red. Para que dos
+        contenedores se comuniquen (por ejemplo, tu app y su base de datos), necesitan
+        compartir una red Docker.
+      </p>
+      <div class="analogy">
+        <span class="tag">Analogía del edificio</span>
+        <p>
+          Crear una red Docker es como poner a dos departamentos del mismo edificio en el
+          mismo piso, con una puerta interna entre ellos. Ambos siguen siendo espacios
+          aislados del resto del edificio, pero pueden llamarse por nombre —dentro de una red
+          Docker, un contenedor puede alcanzar a otro simplemente usando <strong>su nombre
+          como si fuera un dominio</strong>, sin necesidad de conocer su IP.
+        </p>
+      </div>
+
+      <table class="ref-table">
+        <thead><tr><th>Driver de red</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>bridge</td><td>La red por defecto en una sola máquina. Los contenedores en la misma red bridge se ven entre sí por nombre.</td></tr>
+          <tr><td>host</td><td>El contenedor comparte directamente la red del host, sin aislamiento ni mapeo de puertos.</td></tr>
+          <tr><td>none</td><td>Sin red en absoluto — aislamiento total.</td></tr>
+          <tr><td>overlay</td><td>Conecta contenedores entre distintas máquinas físicas (usado en Swarm/clusters).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Crear una red personalizada</span>
+<span class="c-cmd">docker</span> network create mi-red
+
+<span class="c-comment"># Levantar la base de datos EN esa red</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-d</span> <span class="c-flag">--network</span> mi-red <span class="c-flag">--name</span> db postgres
+
+<span class="c-comment"># Levantar la app en la MISMA red — puede conectarse usando "db" como hostname</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-d</span> <span class="c-flag">--network</span> mi-red <span class="c-flag">-p</span> 3000:3000 <span class="c-flag">-e</span> DB_HOST=db mi-app
+
+<span class="c-comment"># Ver qué contenedores están conectados a una red</span>
+<span class="c-cmd">docker</span> network inspect mi-red</code></pre>
+      </div>
+      <div class="note">
+        <span class="tag">El detalle que sorprende a todos al inicio</span>
+        <p>Dentro del código de <code>mi-app</code>, la conexión a la base de datos NO usa <code>localhost</code> — usa <code>db</code>, el nombre del contenedor. Docker resuelve ese nombre automáticamente vía DNS interno dentro de la red compartida.</p>
+      </div>
+
+      <div class="page-nav">
+        <a href="03-imagenes-dockerfile.html"><span class="dir">← Anterior</span><span class="lbl">Imágenes y Dockerfile</span></a>
+        <a class="next" href="05-docker-compose.html"><span class="dir">Siguiente →</span><span class="lbl">Docker Compose</span></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script>renderChrome('volumenes');</script>
+</body>
+</html>

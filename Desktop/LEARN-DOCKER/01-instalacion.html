@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instalación y arquitectura — Docker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+    <main class="page-content">
+      <span class="eyebrow">Módulo 01</span>
+      <h1 class="page-title">Instalación y arquitectura</h1>
+      <p class="page-lede">
+        Antes de escribir un solo comando, vale la pena entender qué piezas están hablando
+        entre sí cuando escribes <code>docker run</code>. Te ahorrará confusión más adelante.
+      </p>
+
+      <h2><span class="num">01.1</span> Cliente–Daemon: quién manda a quién</h2>
+      <p>
+        Docker no es un solo programa: es un sistema cliente-servidor. Cuando escribes un
+        comando en tu terminal, no estás ejecutando el contenedor directamente.
+      </p>
+      <div class="analogy">
+        <span class="tag">Analogía del capitán de puerto</span>
+        <p>
+          El <strong>Docker CLI</strong> (lo que tú escribes) es como un operario en el
+          muelle que da órdenes por radio. El <strong>Docker Daemon</strong>
+          (<code>dockerd</code>) es el capitán de puerto: el que realmente controla las grúas,
+          coordina el almacén de contenedores (imágenes) y decide qué se mueve y cuándo. Tú
+          nunca tocas las grúas directamente —solo le hablas al capitán, y él ejecuta.
+        </p>
+      </div>
+      <p>
+        Esto es útil de recordar cuando algo falla: si el "capitán" (daemon) no está corriendo,
+        ningún comando funcionará, sin importar qué tan bien escrito esté.
+      </p>
+
+      <h2><span class="num">01.2</span> Instalación por sistema operativo</h2>
+
+      <h3>Windows y macOS: Docker Desktop</h3>
+      <p>
+        La forma recomendada para desarrollo local. Incluye el daemon, el CLI, y una interfaz
+        gráfica. En Windows requiere <strong>WSL2</strong> (Subsistema de Windows para Linux)
+        como backend, ya que el daemon de Docker corre nativamente sobre Linux.
+      </p>
+      <ol>
+        <li>Descarga el instalador desde <code>docker.com/products/docker-desktop</code>.</li>
+        <li>En Windows: habilita WSL2 si el instalador te lo pide (<code>wsl --install</code> desde PowerShell como administrador).</li>
+        <li>Reinicia y abre Docker Desktop — espera a que el ícono de la ballena deje de animarse.</li>
+      </ol>
+
+      <h3>Linux: Docker Engine</h3>
+      <p>En Linux no necesitas Docker Desktop: instalas el motor directamente. Ejemplo para Ubuntu/Debian:</p>
+
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># 1. Quitar versiones antiguas si existen</span>
+<span class="c-cmd">sudo</span> apt-get remove docker docker-engine docker.io containerd runc
+
+<span class="c-comment"># 2. Instalar dependencias y añadir el repositorio oficial</span>
+<span class="c-cmd">sudo</span> apt-get update
+<span class="c-cmd">sudo</span> apt-get install ca-certificates curl gnupg
+<span class="c-cmd">curl</span> -fsSL https://download.docker.com/linux/ubuntu/gpg <span class="c-flag">|</span> sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+<span class="c-comment"># 3. Instalar Docker Engine + CLI + Compose plugin</span>
+<span class="c-cmd">sudo</span> apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+<span class="c-comment"># 4. (Opcional pero recomendado) usar docker sin sudo</span>
+<span class="c-cmd">sudo</span> usermod -aG docker <span class="c-flag">$USER</span>
+<span class="c-comment"># cierra sesión y vuelve a entrar para que aplique</span></code></pre>
+      </div>
+
+      <h2><span class="num">01.3</span> Verificar la instalación</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-cmd">docker</span> --version
+<span class="c-out"># Docker version 27.x.x, build xxxxxxx</span>
+
+<span class="c-cmd">docker</span> run hello-world
+<span class="c-out"># Descarga una imagen mínima y confirma que todo el flujo funciona:
+# CLI → daemon → descarga de imagen → contenedor ejecutado → mensaje impreso</span></code></pre>
+      </div>
+      <div class="note">
+        <span class="tag">Qué acaba de pasar</span>
+        <p>
+          <code>docker run hello-world</code> es la mejor prueba de humo posible: obliga al
+          daemon a buscar la imagen localmente, no encontrarla, descargarla de Docker Hub,
+          crear un contenedor a partir de ella, ejecutarlo, imprimir un mensaje y terminar.
+          Si ves el mensaje de confirmación, tu instalación completa —CLI, daemon y red— funciona.
+        </p>
+      </div>
+
+      <h2><span class="num">01.4</span> Docker Desktop vs. Docker Engine, ¿cuál uso?</h2>
+      <table class="ref-table">
+        <thead><tr><th>Escenario</th><th>Recomendación</th></tr></thead>
+        <tbody>
+          <tr><td>Desarrollo en laptop (Win/Mac)</td><td>Docker Desktop — incluye GUI, gestión de recursos y WSL2 integrado</td></tr>
+          <tr><td>Servidor Linux / producción</td><td>Docker Engine directo — sin overhead de interfaz gráfica</td></tr>
+          <tr><td>CI/CD (GitHub Actions, GitLab CI)</td><td>Docker Engine, normalmente ya preinstalado en el runner</td></tr>
+          <tr><td>WSL2 en Windows sin Desktop</td><td>Docker Engine instalado directamente dentro de la distro WSL2</td></tr>
+        </tbody>
+      </table>
+
+      <div class="warn">
+        <span class="tag">Nota de licencia</span>
+        <p>
+          Docker Desktop requiere licencia paga para empresas grandes (más de 250 empleados o
+          10M+ USD de ingresos). Docker Engine en Linux es y siempre ha sido gratuito y de
+          código abierto. Si trabajas en una empresa, vale la pena confirmar cuál aplica.
+        </p>
+      </div>
+
+      <div class="page-nav">
+        <a href="index.html"><span class="dir">← Anterior</span><span class="lbl">Punto de partida</span></a>
+        <a class="next" href="02-comandos-basicos.html"><span class="dir">Siguiente →</span><span class="lbl">Comandos esenciales</span></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script>renderChrome('instalacion');</script>
+</body>
+</html>

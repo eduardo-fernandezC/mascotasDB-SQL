@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker: de cero a profesional</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+
+    <main class="page-content">
+      <span class="eyebrow">Guía completa · 7 módulos</span>
+      <h1 class="page-title">Docker: de cero a profesional</h1>
+      <p class="page-lede">
+        Un contenedor de carga estandariza el transporte de cualquier mercancía en cualquier
+        barco, grúa o camión del mundo. Docker hace exactamente lo mismo con tu software: lo
+        empaqueta en una unidad estándar que corre igual en tu laptop, en el servidor del
+        equipo y en la nube. Esta guía te lleva desde el primer <code>docker run</code>
+        hasta prácticas reales de producción.
+      </p>
+
+      <h2><span class="num">00.1</span> ¿Qué es Docker, exactamente?</h2>
+      <p>
+        Docker es una plataforma que empaqueta una aplicación junto con todo lo que necesita
+        para funcionar —dependencias, librerías, configuración, versión exacta del runtime—
+        en una unidad llamada <strong>contenedor</strong>. Ese contenedor se ejecuta de forma
+        aislada, pero comparte el kernel del sistema operativo anfitrión, lo que lo hace mucho
+        más liviano que una máquina virtual completa.
+      </p>
+
+      <div class="analogy">
+        <span class="tag">Analogía del puerto</span>
+        <p>
+          Antes de los contenedores de carga estandarizados (años 50), cada barco cargaba
+          mercancía suelta: sacos, cajas, barriles, de formas y tamaños distintos, cada uno
+          estibado a mano de manera diferente. Cargar un barco tomaba días. Con el contenedor
+          ISO estándar, cualquier grúa del planeta sabe exactamente cómo tomarlo, cualquier
+          camión sabe cómo transportarlo, y no importa qué haya adentro. Docker aplica esa
+          misma idea al software: no importa si tu app es Python, Node o Java —una vez en un
+          contenedor, cualquier servidor con Docker sabe exactamente cómo "moverlo" y
+          ejecutarlo.
+        </p>
+      </div>
+
+      <h2><span class="num">00.2</span> Contenedores vs. Máquinas Virtuales</h2>
+      <p>
+        Esta es la pregunta que todo principiante se hace. La diferencia está en qué tan
+        "abajo" se hace el aislamiento.
+      </p>
+
+      <div class="compare">
+        <div class="compare-col vm">
+          <h4>🏠 Máquina Virtual</h4>
+          <div class="stack-block" style="background:rgba(74,97,120,0.25); color:#c7d6e3;">App A</div>
+          <div class="stack-block" style="background:rgba(74,97,120,0.18); color:#9fb0ba;">Librerías / Bins</div>
+          <div class="stack-block" style="background:rgba(74,97,120,0.35); color:#c7d6e3;">Sistema operativo invitado</div>
+          <div class="stack-block" style="background:var(--steel); color:#e9edf2;">Hipervisor</div>
+          <div class="stack-block" style="background:var(--navy-mid); color:var(--text-dim);">Hardware / Host OS</div>
+          <p style="margin-top:.8rem;">
+            Cada VM incluye su <strong>propio sistema operativo completo</strong>. Es como
+            construir una casa entera —con su propia agua, luz y estructura— para cada
+            inquilino. Pesado (GBs) y lento de iniciar (minutos), pero con aislamiento total.
+          </p>
+        </div>
+        <div class="compare-col docker">
+          <h4>📦 Contenedor Docker</h4>
+          <div class="stack-block" style="background:rgba(255,196,43,0.2); color:#ffdb7a;">App A</div>
+          <div class="stack-block" style="background:rgba(232,89,12,0.2); color:#ffa15c;">App B</div>
+          <div class="stack-block" style="background:rgba(255,196,43,0.12); color:#ffdb7a;">App C</div>
+          <div class="stack-block" style="background:var(--steel); color:#e9edf2;">Motor Docker</div>
+          <div class="stack-block" style="background:var(--navy-mid); color:var(--text-dim);">Kernel del Host OS (compartido)</div>
+          <p style="margin-top:.8rem;">
+            Los contenedores <strong>comparten el kernel</strong> del sistema anfitrión. Es
+            como un edificio de departamentos: cada uno tiene su espacio privado y aislado,
+            pero comparten la misma infraestructura del edificio. Livianos (MBs) y arrancan
+            en segundos.
+          </p>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="tag">En una frase</span>
+        <p>La VM virtualiza el <em>hardware</em>. Docker virtualiza el <em>sistema operativo</em>. Por eso un contenedor pesa megabytes y arranca en segundos, mientras una VM pesa gigabytes y arranca en minutos.</p>
+      </div>
+
+      <h2><span class="num">00.3</span> Los tres conceptos que lo sostienen todo</h2>
+      <ul>
+        <li><strong>Imagen</strong>: la plantilla de solo lectura —como la receta de una comida. No cambia.</li>
+        <li><strong>Contenedor</strong>: una instancia en ejecución de una imagen —el plato ya servido a partir de esa receta. Puedes crear muchos contenedores idénticos a partir de una sola imagen.</li>
+        <li><strong>Registro (registry)</strong>: el almacén donde viven las imágenes —Docker Hub es el más conocido, como una biblioteca pública de recetas.</li>
+      </ul>
+
+      <h2><span class="num">00.4</span> Mapa de la guía</h2>
+      <p>Sigue el orden sugerido si vienes desde cero, o salta directo al módulo que necesites.</p>
+
+      <div class="crate-grid">
+        <a class="crate-card" href="01-instalacion.html">
+          <span class="iso">INS · 01</span>
+          <h4>Instalación y arquitectura</h4>
+          <p>Docker Desktop, Docker Engine, y cómo hablan entre sí el cliente y el daemon.</p>
+        </a>
+        <a class="crate-card" href="02-comandos-basicos.html">
+          <span class="iso">CMD · 02</span>
+          <h4>Comandos esenciales</h4>
+          <p>El ciclo de vida de un contenedor y los comandos que usarás todos los días.</p>
+        </a>
+        <a class="crate-card" href="03-imagenes-dockerfile.html">
+          <span class="iso">IMG · 03</span>
+          <h4>Imágenes y Dockerfile</h4>
+          <p>Cómo construir tus propias imágenes, capas, y builds multi-etapa.</p>
+        </a>
+        <a class="crate-card" href="04-volumenes-redes.html">
+          <span class="iso">VOL · 04</span>
+          <h4>Volúmenes y redes</h4>
+          <p>Persistencia de datos y cómo hacer que los contenedores se hablen entre sí.</p>
+        </a>
+        <a class="crate-card" href="05-docker-compose.html">
+          <span class="iso">CMP · 05</span>
+          <h4>Docker Compose</h4>
+          <p>Orquesta varios contenedores como una sola aplicación con un solo archivo.</p>
+        </a>
+        <a class="crate-card" href="06-produccion-y-referencia.html">
+          <span class="iso">PRO · 06</span>
+          <h4>Producción y referencia</h4>
+          <p>Buenas prácticas, seguridad, y el cheat sheet completo de comandos.</p>
+        </a>
+      </div>
+
+      <div class="page-nav">
+        <a class="next" href="01-instalacion.html" style="margin-left:auto;">
+          <span class="dir">Siguiente →</span>
+          <span class="lbl">Instalación y arquitectura</span>
+        </a>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>renderChrome('index');</script>
+</body>
+</html>

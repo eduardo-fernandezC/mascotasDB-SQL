@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imágenes y Dockerfile — Docker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+    <main class="page-content">
+      <span class="eyebrow">Módulo 03</span>
+      <h1 class="page-title">Imágenes y Dockerfile</h1>
+      <p class="page-lede">
+        Hasta ahora usaste imágenes que otros construyeron (nginx, ubuntu, alpine). Aquí
+        aprendes a construir las tuyas.
+      </p>
+
+      <h2><span class="num">03.1</span> Una imagen es una receta, no el plato</h2>
+      <div class="analogy">
+        <span class="tag">Analogía de cocina</span>
+        <p>
+          Una <strong>imagen</strong> es como una receta escrita: una lista fija de pasos e
+          ingredientes que no cambia. Un <strong>contenedor</strong> es el plato ya preparado
+          a partir de esa receta —puedes cocinar (ejecutar) la misma receta diez veces y
+          obtener diez platos (contenedores) independientes, pero la receta original nunca se
+          altera. Por eso las imágenes son de solo lectura: modificar un contenedor en marcha
+          no cambia la imagen de la que salió.
+        </p>
+      </div>
+
+      <h2><span class="num">03.2</span> Capas: por qué Docker es tan eficiente</h2>
+      <p>
+        Una imagen no es un bloque monolítico: se construye como una pila de <strong>capas</strong>,
+        cada una representando una instrucción del Dockerfile.
+      </p>
+      <div class="analogy">
+        <span class="tag">Analogía de las hojas de calco</span>
+        <p>
+          Piensa en hojas de acetato transparentes apiladas una sobre otra, cada una con un
+          dibujo distinto. Juntas forman la imagen completa, pero cada hoja sigue siendo un
+          archivo independiente. Si cambias solo la hoja de arriba, no necesitas re-dibujar
+          las de abajo. Docker hace lo mismo: si solo cambia tu código fuente pero no tus
+          dependencias, Docker reutiliza (cachea) las capas de dependencias y solo reconstruye
+          la capa que cambió. Por eso el <strong>orden de las instrucciones en el Dockerfile
+          importa muchísimo</strong> para la velocidad del build.
+        </p>
+      </div>
+
+      <h2><span class="num">03.3</span> Anatomía de un Dockerfile</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">Dockerfile</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-flag">FROM</span> node:20-alpine
+
+<span class="c-flag">WORKDIR</span> /app
+
+<span class="c-comment"># Copiar SOLO el manifiesto de dependencias primero (aprovecha la caché de capas)</span>
+<span class="c-flag">COPY</span> package*.json ./
+<span class="c-flag">RUN</span> npm install
+
+<span class="c-comment"># Recién ahora copiar el resto del código</span>
+<span class="c-flag">COPY</span> . .
+
+<span class="c-flag">EXPOSE</span> 3000
+<span class="c-flag">ENV</span> NODE_ENV=production
+
+<span class="c-flag">CMD</span> [<span class="c-str">"node"</span>, <span class="c-str">"server.js"</span>]</code></pre>
+      </div>
+
+      <table class="ref-table">
+        <thead><tr><th>Instrucción</th><th>Para qué sirve</th></tr></thead>
+        <tbody>
+          <tr><td>FROM</td><td>Imagen base sobre la que construyes. Siempre la primera línea.</td></tr>
+          <tr><td>WORKDIR</td><td>Define el directorio de trabajo dentro del contenedor (crea la carpeta si no existe).</td></tr>
+          <tr><td>COPY</td><td>Copia archivos desde tu máquina hacia la imagen.</td></tr>
+          <tr><td>ADD</td><td>Como COPY, pero además puede descomprimir tars y descargar URLs. Prefiere COPY salvo que necesites eso.</td></tr>
+          <tr><td>RUN</td><td>Ejecuta un comando durante el <em>build</em> y guarda el resultado como una capa nueva.</td></tr>
+          <tr><td>CMD</td><td>Comando por defecto al iniciar el contenedor. Se puede sobrescribir al hacer <code>docker run</code>.</td></tr>
+          <tr><td>ENTRYPOINT</td><td>Como CMD, pero más difícil de sobrescribir — define el "ejecutable principal" del contenedor.</td></tr>
+          <tr><td>ENV</td><td>Define una variable de entorno disponible en build y en runtime.</td></tr>
+          <tr><td>ARG</td><td>Variable disponible solo durante el build (no persiste en el contenedor final).</td></tr>
+          <tr><td>EXPOSE</td><td>Documenta qué puerto usa la app (no lo publica por sí solo, es informativo).</td></tr>
+          <tr><td>USER</td><td>Cambia el usuario con el que corren las siguientes instrucciones y el contenedor final.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <span class="tag">CMD vs. ENTRYPOINT</span>
+        <p>Regla práctica: usa <code>ENTRYPOINT</code> para el programa fijo que el contenedor siempre debe ejecutar, y <code>CMD</code> para los argumentos por defecto de ese programa, que sí quieres que alguien pueda cambiar fácilmente.</p>
+      </div>
+
+      <h2><span class="num">03.4</span> Construir y etiquetar</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Construir la imagen desde el Dockerfile en el directorio actual</span>
+<span class="c-cmd">docker</span> build <span class="c-flag">-t</span> mi-app:1.0 .
+
+<span class="c-comment"># Etiquetar una imagen existente con otro nombre/versión</span>
+<span class="c-cmd">docker</span> tag mi-app:1.0 usuario/mi-app:1.0
+
+<span class="c-comment"># Subirla a Docker Hub (requiere docker login primero)</span>
+<span class="c-cmd">docker</span> push usuario/mi-app:1.0</code></pre>
+      </div>
+      <p>
+        El <code>.</code> al final de <code>docker build</code> es el <strong>contexto de
+        build</strong>: la carpeta cuyos archivos están disponibles para las instrucciones
+        <code>COPY</code>/<code>ADD</code>.
+      </p>
+
+      <h2><span class="num">03.5</span> .dockerignore</h2>
+      <p>
+        Igual que <code>.gitignore</code>, evita que archivos innecesarios —o sensibles— entren
+        al contexto de build y terminen dentro de la imagen.
+      </p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">.dockerignore</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>node_modules
+.git
+.env
+*.log
+Dockerfile
+README.md</code></pre>
+      </div>
+
+      <h2><span class="num">03.6</span> Multi-stage builds</h2>
+      <p>
+        Para compilar tu app necesitas herramientas pesadas (compiladores, dependencias de
+        desarrollo). Para <em>correrla</em> en producción, no. Un build multi-etapa te deja
+        usar una imagen para compilar y otra, mucho más liviana, solo para ejecutar el
+        resultado.
+      </p>
+      <div class="analogy">
+        <span class="tag">Analogía</span>
+        <p>
+          Es como un taller de carpintería: usas máquinas grandes y ruidosas (sierras,
+          lijadoras) para <em>fabricar</em> una silla, pero al final solo envías la silla
+          terminada al cliente, no todo el taller. La etapa de "build" es el taller; la etapa
+          final es solo el producto empacado.
+        </p>
+      </div>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">Dockerfile</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># --- Etapa 1: build (imagen pesada, con todo el toolchain) ---</span>
+<span class="c-flag">FROM</span> node:20 <span class="c-flag">AS</span> builder
+<span class="c-flag">WORKDIR</span> /app
+<span class="c-flag">COPY</span> . .
+<span class="c-flag">RUN</span> npm install <span class="c-flag">&&</span> npm run build
+
+<span class="c-comment"># --- Etapa 2: producción (imagen mínima, solo el resultado) ---</span>
+<span class="c-flag">FROM</span> nginx:alpine
+<span class="c-flag">COPY</span> --from=builder /app/dist /usr/share/nginx/html</code></pre>
+      </div>
+      <div class="note">
+        <span class="tag">Resultado</span>
+        <p>La imagen final solo contiene nginx + los archivos compilados. Ni Node.js, ni node_modules, ni el código fuente terminan en la imagen de producción. Puede reducir el tamaño final de cientos de MB a unos pocos MB.</p>
+      </div>
+
+      <div class="page-nav">
+        <a href="02-comandos-basicos.html"><span class="dir">← Anterior</span><span class="lbl">Comandos esenciales</span></a>
+        <a class="next" href="04-volumenes-redes.html"><span class="dir">Siguiente →</span><span class="lbl">Volúmenes y redes</span></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script>renderChrome('imagenes');</script>
+</body>
+</html>

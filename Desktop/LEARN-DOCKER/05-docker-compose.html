@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker Compose — Docker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+    <main class="page-content">
+      <span class="eyebrow">Módulo 05</span>
+      <h1 class="page-title">Docker Compose</h1>
+      <p class="page-lede">
+        Levantar una app real casi nunca es un solo contenedor: es una app + una base de datos
+        + quizás un caché. Encadenar comandos <code>docker run</code> a mano se vuelve
+        inmanejable rápido. Compose resuelve eso.
+      </p>
+
+      <h2><span class="num">05.1</span> Qué problema resuelve</h2>
+      <div class="analogy">
+        <span class="tag">Analogía de la partitura</span>
+        <p>
+          Si cada contenedor es un instrumento, Docker Compose es la partitura que le dice a
+          la orquesta completa qué tocar, en qué orden y cómo coordinarse —en vez de darle
+          instrucciones por separado a cada músico (cada <code>docker run</code>), escribes
+          una sola partitura (<code>docker-compose.yml</code>) y toda la orquesta arranca
+          sincronizada con un solo comando.
+        </p>
+      </div>
+
+      <h2><span class="num">05.2</span> Anatomía de un docker-compose.yml</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">docker-compose.yml</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-flag">services</span>:
+  <span class="c-flag">web</span>:
+    build: .
+    ports:
+      - <span class="c-str">"3000:3000"</span>
+    environment:
+      - DB_HOST=db
+      - NODE_ENV=production
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+  <span class="c-flag">db</span>:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_PASSWORD=secreto
+      - POSTGRES_DB=miapp
+    volumes:
+      - datos-db:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  <span class="c-flag">redis</span>:
+    image: redis:alpine
+    restart: unless-stopped
+
+<span class="c-flag">volumes</span>:
+  datos-db:</code></pre>
+      </div>
+
+      <table class="ref-table">
+        <thead><tr><th>Clave</th><th>Qué define</th></tr></thead>
+        <tbody>
+          <tr><td>services</td><td>Cada contenedor de tu aplicación, con su propio nombre lógico</td></tr>
+          <tr><td>build</td><td>Construye la imagen desde un Dockerfile local (en vez de descargarla)</td></tr>
+          <tr><td>image</td><td>Usa una imagen ya publicada, sin necesidad de Dockerfile</td></tr>
+          <tr><td>ports</td><td>Mapeo host:contenedor, igual que <code>-p</code> en docker run</td></tr>
+          <tr><td>environment</td><td>Variables de entorno, igual que <code>-e</code></td></tr>
+          <tr><td>depends_on</td><td>Orden de arranque — no espera a que el servicio esté "listo", solo a que el contenedor exista</td></tr>
+          <tr><td>volumes</td><td>Persistencia de datos, definidos también a nivel de archivo</td></tr>
+          <tr><td>restart</td><td>Política de reinicio automático ante fallos</td></tr>
+        </tbody>
+      </table>
+
+      <div class="warn">
+        <span class="tag">depends_on no espera a que la app esté lista</span>
+        <p>Solo espera a que el contenedor arranque, no a que Postgres termine de inicializar internamente. Para dependencias reales, usa <code>healthcheck</code> + <code>condition: service_healthy</code>, o lógica de reintento dentro de tu app.</p>
+      </div>
+
+      <h2><span class="num">05.3</span> Comandos de Compose</h2>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Levantar todos los servicios (crea, construye si hace falta, y arranca)</span>
+<span class="c-cmd">docker</span> compose up
+
+<span class="c-comment"># En segundo plano</span>
+<span class="c-cmd">docker</span> compose up <span class="c-flag">-d</span>
+
+<span class="c-comment"># Reconstruir imágenes antes de levantar (tras cambiar el Dockerfile)</span>
+<span class="c-cmd">docker</span> compose up <span class="c-flag">--build</span>
+
+<span class="c-comment"># Ver el estado de los servicios</span>
+<span class="c-cmd">docker</span> compose ps
+
+<span class="c-comment"># Logs de todos los servicios, en vivo</span>
+<span class="c-cmd">docker</span> compose logs <span class="c-flag">-f</span>
+
+<span class="c-comment"># Entrar a un servicio específico</span>
+<span class="c-cmd">docker</span> compose exec web bash
+
+<span class="c-comment"># Detener y eliminar contenedores, redes (mantiene los volúmenes)</span>
+<span class="c-cmd">docker</span> compose down
+
+<span class="c-comment"># Lo mismo, pero también elimina los volúmenes (¡borra los datos!)</span>
+<span class="c-cmd">docker</span> compose down <span class="c-flag">-v</span></code></pre>
+      </div>
+
+      <h2><span class="num">05.4</span> Variables de entorno con .env</h2>
+      <p>
+        Compose lee automáticamente un archivo <code>.env</code> en el mismo directorio y
+        sustituye las variables dentro del YAML. Así separas configuración de secretos del
+        archivo versionado en git.
+      </p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">.env</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>DB_PASSWORD=secreto_real
+APP_PORT=3000</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">docker-compose.yml (fragmento)</span><button class="copy-btn">Copiar</button></div>
+        <pre><code>services:
+  web:
+    ports:
+      - <span class="c-str">"${APP_PORT}:3000"</span>
+    environment:
+      - DB_PASSWORD=<span class="c-flag">${DB_PASSWORD}</span></code></pre>
+      </div>
+      <div class="note">
+        <span class="tag">Regla de oro</span>
+        <p>El archivo <code>.env</code> con secretos reales va en <code>.gitignore</code>. Versiona en su lugar un <code>.env.example</code> con las claves sin valores sensibles, como plantilla para el equipo.</p>
+      </div>
+
+      <div class="page-nav">
+        <a href="04-volumenes-redes.html"><span class="dir">← Anterior</span><span class="lbl">Volúmenes y redes</span></a>
+        <a class="next" href="06-produccion-y-referencia.html"><span class="dir">Siguiente →</span><span class="lbl">Producción y referencia</span></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script>renderChrome('compose');</script>
+</body>
+</html>

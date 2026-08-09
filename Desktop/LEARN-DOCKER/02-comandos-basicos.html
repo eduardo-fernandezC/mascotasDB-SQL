@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comandos esenciales — Docker</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<button id="nav-toggle" class="nav-toggle" aria-label="Abrir menú">☰</button>
+<div class="shell">
+  <nav id="sidebar-root"></nav>
+  <div class="main-col">
+    <div id="yard-rail" class="yard-rail corrugated"></div>
+    <main class="page-content">
+      <span class="eyebrow">Módulo 02</span>
+      <h1 class="page-title">Comandos esenciales</h1>
+      <p class="page-lede">
+        Estos son los comandos que vas a escribir todos los días. Están agrupados por el
+        ciclo de vida real de un contenedor: crear, observar, intervenir, y limpiar.
+      </p>
+
+      <h2><span class="num">02.1</span> El ciclo de vida de un contenedor</h2>
+      <div class="analogy">
+        <span class="tag">Analogía</span>
+        <p>
+          Un contenedor no es una máquina que "enciendes y apagas" como una VM: es más como un
+          <strong>proceso desechable</strong>. Se crea a partir de una imagen, corre mientras
+          tiene un trabajo activo (un proceso en primer plano), y en el momento en que ese
+          proceso termina, el contenedor se detiene —igual que una calculadora que se apaga
+          sola cuando terminas la operación. Por eso los contenedores están pensados para ser
+          efímeros y reemplazables, no para "mantenerse vivos" a mano.
+        </p>
+      </div>
+
+      <h2><span class="num">02.2</span> Crear y ejecutar</h2>
+
+      <div class="cmd-grid">
+        <div class="cmd-card">
+          <div class="cmd-name">docker run</div>
+          <p class="cmd-desc">Crea un contenedor nuevo a partir de una imagen y lo inicia. El comando más usado de todo Docker.</p>
+          <div class="cmd-flags">
+            <span class="flag-chip"><b>-d</b> segundo plano (detached)</span>
+            <span class="flag-chip"><b>-it</b> interactivo + terminal</span>
+            <span class="flag-chip"><b>-p</b> mapea puertos</span>
+            <span class="flag-chip"><b>--name</b> le pone nombre</span>
+            <span class="flag-chip"><b>--rm</b> se autoelimina al parar</span>
+            <span class="flag-chip"><b>-v</b> monta un volumen</span>
+            <span class="flag-chip"><b>-e</b> variable de entorno</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Servidor web nginx, en segundo plano, puerto 8080 del host → 80 del contenedor</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-d</span> <span class="c-flag">-p</span> 8080:80 <span class="c-flag">--name</span> mi-web nginx
+
+<span class="c-comment"># Ubuntu interactivo: entras directo a una terminal dentro del contenedor</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">-it</span> ubuntu bash
+
+<span class="c-comment"># Se ejecuta, cumple su función, y se borra solo al terminar</span>
+<span class="c-cmd">docker</span> run <span class="c-flag">--rm</span> alpine echo <span class="c-str">"hola desde un contenedor efímero"</span></code></pre>
+      </div>
+      <div class="note">
+        <span class="tag">Diferencia clave</span>
+        <p><code>docker run</code> siempre crea un contenedor NUEVO. Si solo quieres reanudar uno que ya existe, usa <code>docker start</code> — es un error común ejecutar <code>run</code> repetidamente y terminar con diez contenedores nginx apilados.</p>
+      </div>
+
+      <h2><span class="num">02.3</span> Observar lo que está corriendo</h2>
+      <div class="cmd-grid">
+        <div class="cmd-card">
+          <div class="cmd-name">docker ps</div>
+          <p class="cmd-desc">Lista los contenedores en ejecución. Con <code>-a</code>, muestra también los detenidos.</p>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-name">docker logs</div>
+          <p class="cmd-desc">Muestra la salida (stdout/stderr) de un contenedor. Con <code>-f</code>, la sigue en vivo, como <code>tail -f</code>.</p>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-name">docker inspect</div>
+          <p class="cmd-desc">Vuelca toda la metadata de un contenedor o imagen en JSON: IPs, volúmenes, variables de entorno, todo.</p>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-name">docker stats</div>
+          <p class="cmd-desc">Muestra CPU, memoria y red en tiempo real, contenedor por contenedor. Tu "administrador de tareas" de Docker.</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-cmd">docker</span> ps
+<span class="c-out">CONTAINER ID   IMAGE   STATUS          PORTS                  NAMES
+a1b2c3d4e5f6   nginx   Up 5 minutes    0.0.0.0:8080->80/tcp   mi-web</span>
+
+<span class="c-cmd">docker</span> ps <span class="c-flag">-a</span>          <span class="c-comment"># incluye los detenidos</span>
+<span class="c-cmd">docker</span> logs <span class="c-flag">-f</span> mi-web   <span class="c-comment"># sigue el log en vivo, Ctrl+C para salir</span>
+<span class="c-cmd">docker</span> stats            <span class="c-comment"># uso de recursos en tiempo real</span></code></pre>
+      </div>
+
+      <h2><span class="num">02.4</span> Intervenir un contenedor corriendo</h2>
+      <div class="cmd-grid">
+        <div class="cmd-card">
+          <div class="cmd-name">docker exec</div>
+          <p class="cmd-desc">Ejecuta un comando dentro de un contenedor que YA está corriendo. Ideal para "entrar" a inspeccionar sin detener nada.</p>
+        </div>
+        <div class="cmd-card">
+          <div class="cmd-name">docker cp</div>
+          <p class="cmd-desc">Copia archivos entre tu máquina y el contenedor, en cualquier dirección.</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Abrir una terminal DENTRO de un contenedor ya corriendo</span>
+<span class="c-cmd">docker</span> exec <span class="c-flag">-it</span> mi-web bash
+
+<span class="c-comment"># Ejecutar un solo comando sin entrar interactivamente</span>
+<span class="c-cmd">docker</span> exec mi-web cat /etc/nginx/nginx.conf
+
+<span class="c-comment"># Copiar un archivo desde el host hacia el contenedor</span>
+<span class="c-cmd">docker</span> cp ./index.html mi-web:/usr/share/nginx/html/index.html</code></pre>
+      </div>
+      <div class="analogy">
+        <span class="tag">exec vs. run</span>
+        <p>
+          <code>docker run</code> es abrir un contenedor nuevo desde cero. <code>docker exec</code>
+          es tocar la puerta de un contenedor que ya está en marcha y asomarte adentro sin
+          interrumpir lo que estaba haciendo —como entrar a una oficina que ya está en horario
+          laboral, en vez de construir una oficina nueva.
+        </p>
+      </div>
+
+      <h2><span class="num">02.5</span> Detener, iniciar, eliminar</h2>
+      <table class="ref-table">
+        <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>docker stop &lt;id&gt;</td><td>Detiene el contenedor de forma ordenada (envía SIGTERM, espera, luego SIGKILL)</td></tr>
+          <tr><td>docker kill &lt;id&gt;</td><td>Lo detiene de inmediato (SIGKILL directo, sin gracia)</td></tr>
+          <tr><td>docker start &lt;id&gt;</td><td>Reinicia un contenedor detenido, conservando su estado</td></tr>
+          <tr><td>docker restart &lt;id&gt;</td><td>Detiene e inicia de nuevo en un solo paso</td></tr>
+          <tr><td>docker rm &lt;id&gt;</td><td>Elimina un contenedor detenido (agrega <code>-f</code> para forzar si está corriendo)</td></tr>
+        </tbody>
+      </table>
+
+      <h2><span class="num">02.6</span> Trabajar con imágenes</h2>
+      <table class="ref-table">
+        <thead><tr><th>Comando</th><th>Qué hace</th></tr></thead>
+        <tbody>
+          <tr><td>docker images</td><td>Lista las imágenes descargadas localmente</td></tr>
+          <tr><td>docker pull &lt;imagen&gt;</td><td>Descarga una imagen del registro sin ejecutarla</td></tr>
+          <tr><td>docker rmi &lt;imagen&gt;</td><td>Elimina una imagen local</td></tr>
+          <tr><td>docker tag</td><td>Le pone una etiqueta/alias a una imagen</td></tr>
+          <tr><td>docker push</td><td>Sube una imagen a un registro (Docker Hub u otro)</td></tr>
+        </tbody>
+      </table>
+
+      <h2><span class="num">02.7</span> Limpieza del sistema</h2>
+      <p>
+        Con el tiempo se acumulan imágenes, contenedores detenidos y redes huérfanas que
+        ocupan espacio en disco silenciosamente.
+      </p>
+      <div class="code-block">
+        <div class="code-head"><span class="code-label">bash</span><button class="copy-btn">Copiar</button></div>
+        <pre><code><span class="c-comment"># Elimina contenedores detenidos, redes sin usar, y caché de build</span>
+<span class="c-cmd">docker</span> system prune
+
+<span class="c-comment"># Lo mismo, pero también elimina imágenes sin usar (más agresivo)</span>
+<span class="c-cmd">docker</span> system prune <span class="c-flag">-a</span>
+
+<span class="c-comment"># Ver cuánto espacio está usando Docker en total</span>
+<span class="c-cmd">docker</span> system df</code></pre>
+      </div>
+      <div class="warn">
+        <span class="tag">Cuidado</span>
+        <p><code>docker system prune -a</code> borra TODAS las imágenes que no tengan un contenedor corriendo asociado. Si tienes imágenes que descargaste para usar después, revisa dos veces antes de confirmar.</p>
+      </div>
+
+      <div class="page-nav">
+        <a href="01-instalacion.html"><span class="dir">← Anterior</span><span class="lbl">Instalación y arquitectura</span></a>
+        <a class="next" href="03-imagenes-dockerfile.html"><span class="dir">Siguiente →</span><span class="lbl">Imágenes y Dockerfile</span></a>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="js/script.js"></script>
+<script>renderChrome('comandos');</script>
+</body>
+</html>
